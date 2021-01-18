@@ -35,16 +35,12 @@ class Auth {
     }
   }
 
-  Future signUp(String email, String password, String name) async {
-    try {
-      username = name;
-      final result = await _auth.createUserWithEmailAndPassword(
-          email: email, password: password);
-      auth.User user = result.user;
-      return currentUser(user);
-    } catch (e) {
-      print(e.toString());
-    }
+  Future<String> signUp(String email, String password, String name) async {
+    username = name;
+    final result = await _auth.createUserWithEmailAndPassword(
+        email: email, password: password);
+    auth.User user = result.user;
+    return user.uid;
   }
 
   Future resetPassword(String email) async {
@@ -89,7 +85,7 @@ class Auth {
             .collection("users")
             .where("email", isEqualTo: user.email)
             .get();
-        print('leeen${result.docs.length}');
+
         if (result.docs.length == 0) {
           try {
             _fireStoreMethos.uploadinfo(userInfo, user.uid);

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shatchat/screens/profile.dart';
 import 'chatScreen.dart';
-
+import 'package:shatchat/services/firestore.dart';
 import 'package:shatchat/services/auth.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SignIn extends StatefulWidget {
   final Function toggle;
@@ -18,15 +20,29 @@ class _SignInState extends State<SignIn> {
   final TextEditingController email = TextEditingController();
 
   final TextEditingController password = TextEditingController();
-
+  String senderPhoto;
   final Auth auth = new Auth();
+  FireStoreMethos _fireStoreMethos = new FireStoreMethos();
+  FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<void> _submit() async {
     if (_formkey.currentState.validate()) {
       _formkey.currentState.save();
-      auth.signIn(email.text, password.text).then((value) =>
-          Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (ctx) => ChatScreen())));
+      await auth.signIn(email.text, password.text).then((value) async {
+        senderPhoto =
+            await _fireStoreMethos.getUserPhoto(_auth.currentUser.uid);
+        print(senderPhoto);
+        return Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (ctx) => ChatScreen(senderPhoto)));
+      });
+
+      // senderPhoto = await _fireStoreMethos
+      //     .getUserPhoto(_auth.currentUser.uid)
+      //     .then((value) {
+      //   print(senderPhoto);
+      //   // return Navigator.pushReplacement(context,
+      //   //     MaterialPageRoute(builder: (ctx) => ChatScreen(senderPhoto)));
+      // });
     }
   }
 
@@ -164,16 +180,17 @@ class _SignInState extends State<SignIn> {
                                                     BorderRadius.circular(15.0),
                                               ),
                                               color: Color(0xff5ad1a4),
-                                              onPressed: () {
-                                                auth
-                                                    .signInwithGoogle()
-                                                    .then((value) {
-                                                  Navigator.pushReplacement(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                          builder: (ctx) =>
-                                                              ChatScreen()));
-                                                });
+                                              onPressed: () async {
+                                                await auth.signInwithGoogle().then(
+                                                    (value) => Navigator.pushReplacement(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                            builder: (ctx) =>
+                                                                ChatScreen(_auth
+                                                                    .currentUser
+                                                                    .photoURL))));
+
+                                                print('sendr$senderPhoto');
                                               },
                                               child: Container(
                                                 width: 150,

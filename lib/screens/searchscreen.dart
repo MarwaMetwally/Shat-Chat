@@ -1,7 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shatchat/screens/chatroom.dart';
 import 'package:shatchat/services/firestore.dart';
 import 'package:shatchat/widgets/searchList.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -17,6 +19,19 @@ class _SearchScreenState extends State<SearchScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context).accentColor.withOpacity(0.3),
+              Theme.of(context).accentColor.withOpacity(0.1),
+              Colors.white,
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            // stops: [0.0, 1.0],
+            // tileMode: TileMode.clamp,
+          ),
+        ),
         child: Column(
           children: [
             Container(
@@ -30,13 +45,13 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Container(
                 child: Row(
                   children: [
-                    CircleAvatar(
-                      backgroundColor: Theme.of(context).accentColor,
-                      child: Icon(
-                        Icons.search,
-                        color: Colors.white,
-                      ),
-                    ),
+                    // CircleAvatar(
+                    //   backgroundColor: Theme.of(context).accentColor,
+                    //   child: Icon(
+                    //     Icons.search,
+                    //     color: Colors.white,
+                    //   ),
+                    // ),
                     Expanded(
                       child: TextField(
                         onChanged: (value) async {
@@ -54,6 +69,23 @@ class _SearchScreenState extends State<SearchScreen> {
                           });
                         },
                         decoration: InputDecoration(
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(25),
+                              borderSide: BorderSide(
+                                color: Colors.grey,
+                                width: 0,
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(25)),
+                              borderSide:
+                                  BorderSide(width: 1, color: Colors.grey),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              //  color: Theme.of(context).accentColor,
+                            ),
                             hintText: 'User Name',
                             contentPadding: EdgeInsets.only(left: 20),
                             hintStyle: TextStyle(color: Colors.grey)),
@@ -70,11 +102,34 @@ class _SearchScreenState extends State<SearchScreen> {
                 child: ListView.builder(
               padding: EdgeInsets.all(8),
               itemCount: filteredusers.length,
-              itemBuilder: (context, index) => SearchTile(
-                email: filteredusers[index].data()["email"],
-                username: filteredusers[index].data()["name"],
-                photoUrl: filteredusers[index].data()["photo"],
-              ),
+              itemBuilder: (context, index) => filteredusers[index]
+                          .data()["email"] !=
+                      FirebaseAuth.instance.currentUser.email
+                  ? SearchTile(
+                      username: filteredusers[index].data()["name"],
+                      photoUrl: filteredusers[index].data()["photo"],
+                      onPressed: () async {
+                        String photo = await firestore.getUserPhoto(
+                            FirebaseAuth.instance.currentUser.uid);
+                        String phone = await firestore.getUserPhoto(
+                            FirebaseAuth.instance.currentUser.uid);
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (ctx) => ChatRoom(
+                                      receiverPhoto:
+                                          filteredusers[index].data()["photo"],
+                                      receiver:
+                                          filteredusers[index].data()["email"],
+                                      senderPhoto: photo,
+                                      receiverName:
+                                          filteredusers[index].data()["name"],
+                                      receiverPhone: phone == null ? "" : phone,
+                                      sender: FirebaseAuth
+                                          .instance.currentUser.email,
+                                    )));
+                      })
+                  : Container(),
             ))
           ],
         ),

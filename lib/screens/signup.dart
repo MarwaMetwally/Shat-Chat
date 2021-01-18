@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'chatScreen.dart';
+import 'profile.dart';
 import 'package:shatchat/services/auth.dart';
 import 'package:shatchat/services/firestore.dart';
 import 'package:shatchat/model/user.dart';
@@ -15,8 +15,7 @@ class SignUp extends StatefulWidget {
 }
 
 class _SignUpState extends State<SignUp> {
-  static String email;
-  static String password;
+  final TextEditingController email = TextEditingController();
 
   final Auth authh = new Auth();
   Users currentuser = new Users();
@@ -27,6 +26,8 @@ class _SignUpState extends State<SignUp> {
 
   final TextEditingController username = TextEditingController();
 
+  final TextEditingController phone = TextEditingController();
+
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -36,25 +37,72 @@ class _SignUpState extends State<SignUp> {
     final deviceWidth = MediaQuery.of(context).size.width;
     final deviceHeight = MediaQuery.of(context).size.height;
 
-    Future<void> _submit() async {
-      if (_formKey.currentState.validate()) {
-        _formKey.currentState.save();
-        auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
+    void showErrorDialog(String message) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text('An Error Occurred!'),
+          content: Text(message),
+          actions: <Widget>[
+            FlatButton(
+              child: Text('Okay'),
+              onPressed: () {
+                Navigator.of(ctx).pop();
+              },
+            )
+          ],
+        ),
+      );
+    }
 
-        authh.signUp(email, password, username.text).then((value) {
+    Future<void> _submit() async {
+      auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
+      if (_formKey.currentState.validate()) {
+        try {
+          // _formKey.currentState.save();
+
+          final userId = await authh
+              .signUp(email.text, _passwordController.text, username.text)
+              .catchError((e) {
+            showErrorDialog(e.toString());
+          });
+
           Map<String, String> userInfo = {
             "name": username.text,
-            "email": email,
+            "email": email.text,
+            "photo":
+                "https://icon-library.com/images/no-profile-pic-icon/no-profile-pic-icon-16.jpg"
           };
+          if (userId != null) {
+            currentuser = authh.currentUser(_auth.currentUser);
+            userid = currentuser.userId;
 
-          currentuser = authh.currentUser(_auth.currentUser);
-          userid = currentuser.userId;
+            firestore.uploadinfo(userInfo, userid);
+            Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                    builder: (ctx) => ProfileScreen(
+                          userName: username.text,
+                          phone: phone.text,
+                        )));
+          }
 
-          firestore.uploadinfo(userInfo, userid);
-
-          Navigator.pushReplacement(
-              context, MaterialPageRoute(builder: (ctx) => ChatScreen()));
-        });
+          //  });
+        } catch (e) {
+          // var errormsg = 'Authentication failed !';
+          // if (e.toString().contains('EMAIL_EXISTS')) {
+          //   errormsg = 'This email address is already in use.';
+          // } else if (e.toString().contains('INVALID_EMAIL')) {
+          //   errormsg = 'This is not a valid email address';
+          // } else if (e.toString().contains('WEAK_PASSWORD')) {
+          //   errormsg = 'This password is too weak.';
+          // } else if (e.toString().contains('EMAIL_NOT_FOUND')) {
+          //   errormsg = 'Could not find a user with that email.';
+          // } else if (e.toString().contains('INVALID_PASSWORD')) {
+          //   errormsg = 'Invalid password.';
+          // }
+          print('eeeee$e');
+        }
       }
     }
 
@@ -137,6 +185,7 @@ class _SignUpState extends State<SignUp> {
                                         )),
                                   ),
                                   TextFormField(
+                                    controller: email,
                                     keyboardType: TextInputType.emailAddress,
                                     decoration: InputDecoration(
                                         labelText: 'Email',
@@ -151,7 +200,20 @@ class _SignUpState extends State<SignUp> {
                                       }
                                     },
                                     onSaved: (value) {
-                                      email = value;
+                                      email.text = value;
+                                    },
+                                  ),
+                                  TextFormField(
+                                    controller: phone,
+                                    keyboardType: TextInputType.emailAddress,
+                                    decoration: InputDecoration(
+                                        labelText: 'Phone',
+                                        prefixIcon: Icon(
+                                          Icons.phone,
+                                          color: Color(0xff45b591),
+                                        )),
+                                    onSaved: (value) {
+                                      phone.text = value;
                                     },
                                   ),
                                   TextFormField(
@@ -169,7 +231,7 @@ class _SignUpState extends State<SignUp> {
                                       }
                                     },
                                     onSaved: (value) {
-                                      password = value;
+                                      _passwordController.text = value;
                                     },
                                   ),
                                   TextFormField(
@@ -202,7 +264,15 @@ class _SignUpState extends State<SignUp> {
                                                     BorderRadius.circular(15.0),
                                               ),
                                               color: Color(0xff5ad1a4),
-                                              onPressed: _submit,
+                                              onPressed: () {
+                                                _submit();
+                                                // Navigator.pushReplacement(
+                                                //     context,
+                                                //     MaterialPageRoute(
+                                                //         builder: (ctx) =>
+                                                //             ProfileScreen(
+                                                //                 userid)));
+                                              },
                                               child: Text(
                                                 'Sign up',
                                                 style: TextStyle(
