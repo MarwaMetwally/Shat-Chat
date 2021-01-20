@@ -6,6 +6,10 @@ import 'package:shatchat/services/firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart' as storage;
+import 'package:path/path.dart' as path;
 
 class ChatRoom extends StatefulWidget {
   final String sender;
@@ -14,9 +18,11 @@ class ChatRoom extends StatefulWidget {
   final String senderPhoto;
   final String receiverName;
   final String receiverPhone;
+  final bool active;
 
   ChatRoom(
       {this.receiver,
+      this.active,
       this.sender,
       this.receiverPhoto,
       this.senderPhoto,
@@ -34,18 +40,60 @@ class _ChatRoomState extends State<ChatRoom> {
   String roomId;
   bool isMe;
   bool loveReact = false;
+  final picker = ImagePicker();
+  File _image;
+  String imageUrl;
+
+  Future<void> uploadImageToFirebase() async {
+    final pickedFile = await picker.getImage(source: ImageSource.gallery);
+    setState(() {
+      _image = File(pickedFile.path);
+    });
+    if (_image != null) {
+      String fileName = path.basename(_image.path);
+
+      storage.Reference firebaseStorageRef =
+          storage.FirebaseStorage.instance.ref().child(fileName);
+
+      storage.UploadTask uploadTask = firebaseStorageRef.putFile(_image);
+
+      storage.TaskSnapshot taskSnapshot = await uploadTask;
+      taskSnapshot.ref.getDownloadURL().then((value) {
+        setState(() {
+          print("Done: $value");
+          print(value);
+          imageUrl = value;
+
+          if (imageUrl != null) {
+            Map<String, dynamic> chatMap = {
+              "sender": currentUser,
+              "msg": imageUrl,
+              "time": Timestamp.now(),
+              "liked": false,
+              "photo": true
+            };
+            Map<String, dynamic> roomMap = {
+              "time": DateTime.now().toString(),
+              "users": [currentUser, widget.receiver],
+            };
+
+            _fireStoreMethos.createChatRoom(roomId, chatMap, roomMap);
+          }
+
+          // return value;
+        });
+      });
+    }
+  }
 
   @override
   void initState() {
-    // setState(() async {
-    //   // photo = await _fireStoreMethos.getUserByEmail(widget.sender);
-
-    //   print(photo);
-    // });
-
     currentUser = _auth.currentUser.email;
-
+    print('sender${widget.sender}');
+    print('rec${widget.receiver}');
     roomId = _fireStoreMethos.getDocID(widget.sender, widget.receiver);
+    print(roomId);
+
     super.initState();
   }
 
@@ -77,6 +125,7 @@ class _ChatRoomState extends State<ChatRoom> {
                       context,
                       MaterialPageRoute(
                           builder: (ctx) => ProfileScreen(
+                                sender: false,
                                 userName: widget.receiverName,
                                 photo: widget.receiverPhoto,
                                 phone: widget.receiverPhone == null
@@ -118,7 +167,18 @@ class _ChatRoomState extends State<ChatRoom> {
                         SizedBox(
                           width: 30,
                         ),
-                        Text(widget.receiverName),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(widget.receiverName),
+                            widget.active
+                                ? Text(
+                                    'online',
+                                    style: TextStyle(color: Colors.green[700]),
+                                  )
+                                : Container(),
+                          ],
+                        ),
                       ],
                     ),
                   ),
@@ -131,97 +191,84 @@ class _ChatRoomState extends State<ChatRoom> {
                     if (snapshot.data != null) {
                       return ListView.builder(
                         reverse: true,
-                        shrinkWrap: true,
                         itemCount: snapshot.data != null
                             ? snapshot.data.docs.length
                             : 0,
                         itemBuilder: (context, index) {
-                          return Stack(
-                            children: [
-                              // snapshot.data.docs[index].data()["sender"] !=
-                              //         currentUser
-                              //     ? Container(
-                              //         height: 40,
-                              //         width: 40,
-                              //         decoration: BoxDecoration(
-                              //             borderRadius:
-                              //                 BorderRadius.circular(25),
-                              //             image: DecorationImage(
-                              //               fit: BoxFit.contain,
-                              //               image: widget.receiverPhoto != null
-                              //                   ? NetworkImage(
-                              //                       widget.receiverPhoto)
-                              //                   : NetworkImage(
-                              //                       'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU'),
-                              //             )),
-                              //       )
-                              //     : Container(),
-                              GestureDetector(
-                                onDoubleTap: () {
-                                  setState(() {
-                                    loveReact = !loveReact;
-                                    _fireStoreMethos.upateReact(
-                                        loveReact,
-                                        roomId,
-                                        snapshot.data.docs[index].documentID);
-                                  });
-                                },
-                                child: Padding(
-                                  padding: const EdgeInsets.only(right: 50),
-                                  child: Message(
-                                      time: DateFormat().add_jm().format(
-                                          DateTime.parse(snapshot
-                                              .data.docs[index]
-                                              .data()["time"]
-                                              .toDate()
-                                              .toString())),
-                                      isMe: snapshot.data.docs[index]
-                                              .data()["sender"] ==
-                                          currentUser,
-                                      text: snapshot.data.docs[index]
-                                          .data()["msg"]),
+                          if (snapshot.data != null &&
+                              snapshot.connectionState !=
+                                  ConnectionState.waiting) {
+                            return Stack(
+                              children: [
+                                Stack(
+                                  children: [
+                                    Padding(
+                                      padding: snapshot.data.docs[index]
+                                                  .data()["sender"] ==
+                                              currentUser
+                                          ? const EdgeInsets.only(right: 50)
+                                          : const EdgeInsets.only(left: 47),
+                                      child: Message(
+                                          msgphoto: snapshot.data.docs[index]
+                                              .data()["photo"],
+                                          time: DateFormat().add_jm().format(
+                                              DateTime.parse(snapshot
+                                                  .data.docs[index]
+                                                  .data()["time"]
+                                                  .toDate()
+                                                  .toString())),
+                                          isMe: snapshot.data.docs[index]
+                                                  .data()["sender"] ==
+                                              currentUser,
+                                          text: snapshot.data.docs[index]
+                                              .data()["msg"]),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              Positioned(
-                                  top: 40,
+                                Positioned(
                                   right: snapshot.data.docs[index]
                                               .data()["sender"] ==
                                           currentUser
-                                      ? 150
-                                      : 50,
-                                  child:
-                                      snapshot.data.docs[index].data()["liked"]
-                                          ? Icon(Icons.favorite,
-                                              size: 22, color: Colors.red[700])
-                                          : Container()),
-                              snapshot.data.docs[index].data()["sender"] ==
-                                      currentUser
-                                  ? Positioned(
-                                      right: 10,
-                                      child: Padding(
-                                        padding:
-                                            const EdgeInsets.only(right: 5),
-                                        child: Container(
-                                          height: 40,
-                                          width: 40,
-                                          decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(25),
-                                              image: DecorationImage(
-                                                fit: BoxFit.contain,
-                                                image: widget.senderPhoto !=
-                                                        null
+                                      ? 10
+                                      : null,
+                                  left: snapshot.data.docs[index]
+                                              .data()["sender"] ==
+                                          currentUser
+                                      ? null
+                                      : 10,
+                                  top: 7,
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(right: 5),
+                                    child: Container(
+                                      height: 40,
+                                      width: 40,
+                                      decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(25),
+                                          image: DecorationImage(
+                                            fit: BoxFit.contain,
+                                            image: snapshot.data.docs[index]
+                                                        .data()["sender"] ==
+                                                    currentUser
+                                                ? widget.senderPhoto != null
                                                     ? NetworkImage(
                                                         widget.senderPhoto)
                                                     : NetworkImage(
+                                                        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU')
+                                                : widget.receiverPhoto != null
+                                                    ? NetworkImage(
+                                                        widget.receiverPhoto)
+                                                    : NetworkImage(
                                                         'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU'),
-                                              )),
-                                        ),
-                                      ),
-                                    )
-                                  : Container(),
-                            ],
-                          );
+                                          )),
+                                    ),
+                                  ),
+                                )
+                              ],
+                            );
+                          } else {
+                            return Container();
+                          }
                         },
                       );
                     } else {
@@ -232,66 +279,78 @@ class _ChatRoomState extends State<ChatRoom> {
               ),
               Padding(
                 padding: const EdgeInsets.all(8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        alignment: Alignment.centerLeft,
-                        height: 45,
-                        child: Center(
-                          child: TextField(
-                            cursorColor: Theme.of(context).accentColor,
-                            //  autofocus: true,
-                            textAlign: TextAlign.left,
-                            enabled: true,
-                            controller: msg,
-                            decoration: InputDecoration(
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(25),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey,
-                                    width: 0,
+                child: Container(
+                  //  height: 50,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.photo,
+                            size: 30, color: Theme.of(context).accentColor),
+                        onPressed: () async {
+                          await uploadImageToFirebase();
+                        },
+                      ),
+                      Expanded(
+                        child: Container(
+                          height: 45,
+                          child: Center(
+                            child: TextField(
+                              cursorColor: Theme.of(context).accentColor,
+                              //  autofocus: true,
+                              textAlign: TextAlign.left,
+                              enabled: true,
+                              controller: msg,
+                              decoration: InputDecoration(
+                                  contentPadding:
+                                      EdgeInsets.all(8.0), //here your padding
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(25),
+                                    borderSide: BorderSide(
+                                      color: Colors.grey,
+                                      width: 0,
+                                    ),
                                   ),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius:
-                                      BorderRadius.all(Radius.circular(25)),
-                                  borderSide:
-                                      BorderSide(width: 1, color: Colors.grey),
-                                ),
-                                hintText: 'write the message',
-                                hintStyle: TextStyle(color: Colors.grey)),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius:
+                                        BorderRadius.all(Radius.circular(25)),
+                                    borderSide: BorderSide(
+                                        width: 1, color: Colors.grey),
+                                  ),
+                                  hintText: 'write the message',
+                                  hintStyle: TextStyle(color: Colors.grey)),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    SizedBox(
-                      width: 7,
-                    ),
-                    GestureDetector(
-                        onTap: () {
-                          Map<String, dynamic> chatMap = {
-                            "sender": currentUser,
-                            "msg": msg.text,
-                            "time": Timestamp.now(),
-                            "liked": false
-                          };
-                          Map<String, dynamic> roomMap = {
-                            "time": DateTime.now().toString(),
-                            "users": [currentUser, widget.receiver],
-                          };
-                          print(chatMap["sender"]);
-                          print(currentUser);
-                          _fireStoreMethos.createChatRoom(
-                              roomId, chatMap, roomMap);
-                          msg.clear();
-                        },
-                        child: Icon(
-                          Icons.send,
-                          size: 30,
-                          color: Theme.of(context).accentColor,
-                        ))
-                  ],
+                      SizedBox(
+                        width: 7,
+                      ),
+                      GestureDetector(
+                          onTap: () {
+                            Map<String, dynamic> chatMap = {
+                              "sender": currentUser,
+                              "msg": msg.text,
+                              "time": Timestamp.now(),
+                              "liked": false,
+                              "photo": false
+                            };
+                            Map<String, dynamic> roomMap = {
+                              "time": DateTime.now().toString(),
+                              "users": [currentUser, widget.receiver],
+                            };
+                            print(chatMap["sender"]);
+                            print(currentUser);
+                            _fireStoreMethos.createChatRoom(
+                                roomId, chatMap, roomMap);
+                            msg.clear();
+                          },
+                          child: Icon(
+                            Icons.send,
+                            size: 30,
+                            color: Theme.of(context).accentColor,
+                          )),
+                    ],
+                  ),
                 ),
               )
             ],

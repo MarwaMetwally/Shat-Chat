@@ -1,9 +1,8 @@
 import 'dart:ui';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:shatchat/helper/authenticate.dart';
+
 import 'package:shatchat/screens/profile.dart';
+import 'package:shatchat/screens/signin.dart';
 import 'chatroom.dart';
 import 'package:shatchat/screens/searchscreen.dart';
 import 'package:shatchat/services/firestore.dart';
@@ -13,31 +12,59 @@ import 'package:shatchat/services/auth.dart';
 import 'package:intl/intl.dart';
 
 class ChatScreen extends StatefulWidget {
-  final String senderPhoto;
-  ChatScreen(this.senderPhoto);
+  // final String senderPhoto;
+  // ChatScreen(this.senderPhoto);
   @override
   _ChatScreenState createState() => _ChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   FireStoreMethos fireStoreMethos = new FireStoreMethos();
   static FirebaseAuth _auth = FirebaseAuth.instance;
-  static User currentuser = _auth.currentUser;
+
   static String receiver;
   Auth auth = new Auth();
   String phone;
   int snapshotIndex;
   String userName;
   String email;
-  static String sender = currentuser.email;
+  String sender = _auth.currentUser.email;
   Stream datalist;
   String senderpPhoto;
   List<String> users = [];
   List<String> roomID = [];
+
   @override
   void initState() {
-    //print('senderrr ${widget.senderPhoto}');
+    print(_auth.currentUser.email);
+    WidgetsBinding.instance.addObserver(this);
+
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    switch (state) {
+      case AppLifecycleState.paused:
+        fireStoreMethos.updateStatus(false, _auth.currentUser.uid);
+        break;
+      case AppLifecycleState.resumed:
+        fireStoreMethos.updateStatus(true, _auth.currentUser.uid);
+        break;
+      case AppLifecycleState.inactive:
+        print('inactive');
+        break;
+      case AppLifecycleState.detached:
+        print('detacch');
+        break;
+    }
   }
 
   @override
@@ -54,25 +81,10 @@ class _ChatScreenState extends State<ChatScreen> {
             ],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            // stops: [0.0, 1.0],
-            // tileMode: TileMode.clamp,
           ),
         ),
         height: MediaQuery.of(context).size.height,
         width: MediaQuery.of(context).size.width,
-        // decoration: BoxDecoration(
-        //   gradient: LinearGradient(
-        //     colors: [
-        //       Theme.of(context).accentColor.withOpacity(0.3),
-        //       Theme.of(context).accentColor.withOpacity(0.1),
-        //       Colors.white,
-        //     ],
-        //     begin: Alignment.topCenter,
-        //     end: Alignment.bottomCenter,
-        //     // stops: [0.0, 1.0],
-        //     // tileMode: TileMode.clamp,
-        //   ),
-        // ),
         child: Column(children: [
           Container(
             decoration: BoxDecoration(
@@ -84,74 +96,86 @@ class _ChatScreenState extends State<ChatScreen> {
                       Colors.black.withOpacity(0.4), BlendMode.dstATop),
                   image: AssetImage('assets/images/background.jpg'),
                   fit: BoxFit.cover),
-              // border: Border(
-              //     bottom: BorderSide(
-              //         color: Theme.of(context).accentColor.withOpacity(0.3),
-              //  width: 1)),
               color: Color(0xff45b591).withOpacity(0.2),
             ),
             height: 70,
             width: MediaQuery.of(context).size.width,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25),
-              child: Row(
-                children: [
-                  Container(
-                    height: 50,
-                    width: 50,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(25),
-                        image: DecorationImage(
-                          image: NetworkImage(widget.senderPhoto),
-                          fit: BoxFit.contain,
-                        )),
-                  ),
-                  SizedBox(
-                    width: 30,
-                  ),
-                  Text('Chats'),
-                ],
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                // Container(
+                //   height: 45,
+                //   width: 45,
+                //   decoration: BoxDecoration(
+                //     borderRadius: BorderRadius.circular(25),
+                //     // image: DecorationImage(
+                //     //   image: NetworkImage(widget.senderPhoto),
+                //     //   fit: BoxFit.fill,
+                //     // )
+                //   ),
+                // ),
+                SizedBox(
+                  width: 30,
+                ),
+                Text(
+                  'Chats',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 27),
+                ),
+              ],
             ),
           ),
-          StreamBuilder(
-            stream: fireStoreMethos.friends(currentuser.email),
-            builder: (context, chatroomsnapshot) {
-              if (chatroomsnapshot.data != null) {
-                for (int i = 0; i < chatroomsnapshot.data.docs.length; i++) {
-                  snapshotIndex = i;
-                  //      print('ind $snapshotIndex');
-                  roomID.add(
-                      chatroomsnapshot.data.docs[snapshotIndex].documentID);
-                  //   print(roomID[i]);
-                  email = roomID[i]
-                      .replaceAll(currentuser.email, "")
-                      .replaceAll('-', "");
-                  //   print(email);
-                  users.add(email);
-                }
+          Expanded(
+            child: StreamBuilder(
+              stream: fireStoreMethos.friends(_auth.currentUser.email),
+              builder: (context, chatroomsnapshot) {
+                if (chatroomsnapshot.data != null) {
+                  for (int i = 0; i < chatroomsnapshot.data.docs.length; i++) {
+                    snapshotIndex = i;
+                    print('ind $snapshotIndex');
+                    roomID.add(
+                        chatroomsnapshot.data.docs[snapshotIndex].documentID);
+                    print(roomID[i]);
+                    email = roomID[i]
+                        .replaceAll(_auth.currentUser.email, "")
+                        .replaceAll('-', "");
+                    print(email);
+                    users.add(email);
+                  }
 
-                return Expanded(
-                  child: FutureBuilder(
+                  return FutureBuilder(
                     future: fireStoreMethos.getAllUsers(),
                     builder: (context, snapshot) {
-                      if (snapshot.data != null) {
+                      if (snapshot.connectionState == ConnectionState.waiting ||
+                          snapshot.data == null) {
+                        return Container();
+                      } else {
                         return ListView.builder(
                           itemCount: snapshot.data.docs.length,
                           itemBuilder: (context, index) {
                             return GestureDetector(
                               onTap: () async {
-                                setState(() {
-                                  receiver =
-                                      snapshot.data.docs[index].data()["email"];
-                                });
-                                senderpPhoto = await fireStoreMethos
-                                    .getUserPhoto(currentuser.uid);
+                                receiver =
+                                    snapshot.data.docs[index].data()["email"];
 
+                                phone = await fireStoreMethos
+                                    .getUserPhone(_auth.currentUser.uid);
+                                senderpPhoto = await fireStoreMethos
+                                    .getUserPhoto(_auth.currentUser.uid);
+                                print(
+                                    snapshot.data.docs[index].data()["status"]);
+                                print(phone);
+                                print(snapshot.data.docs[index].data()["name"]);
+                                print(receiver);
+                                print(sender);
+                                print(
+                                    snapshot.data.docs[index].data()["photo"]);
+                                print(senderpPhoto);
                                 Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) => ChatRoom(
+                                          active: snapshot.data.docs[index]
+                                              .data()["status"],
                                           receiverPhone: phone,
                                           receiverName: snapshot
                                               .data.docs[index]
@@ -170,11 +194,15 @@ class _ChatScreenState extends State<ChatScreen> {
                               },
                               child: users.contains(
                                       snapshot.data.docs[index].data()["email"])
-                                  ? FutureBuilder(
-                                      future: fireStoreMethos
-                                          .getLastMessage(roomID[index]),
+                                  ? StreamBuilder(
+                                      stream: fireStoreMethos.getLastMessage(
+                                          roomID[users.indexOf(snapshot
+                                              .data.docs[index]
+                                              .data()["email"])]),
                                       builder: (context, msgsnapshot) {
                                         if (msgsnapshot.data != null) {
+                                          String msg = msgsnapshot.data.docs[0]
+                                              .data()["msg"];
                                           String date = DateFormat()
                                               .add_jm()
                                               .format(DateTime.parse(msgsnapshot
@@ -182,14 +210,20 @@ class _ChatScreenState extends State<ChatScreen> {
                                                   .data()["time"]
                                                   .toDate()
                                                   .toString()));
-                                          // print(date);
-                                          return SearchTile(
+                                          print(index);
+                                          print(snapshot.data.docs[index]
+                                              .data()["photo"]);
+                                          return ChatTile(
+                                            active: snapshot.data.docs[index]
+                                                .data()["status"],
                                             photoUrl: snapshot.data.docs[index]
                                                 .data()["photo"],
                                             username: snapshot.data.docs[index]
                                                 .data()["name"],
-                                            recentMsg: msgsnapshot.data.docs[0]
-                                                .data()["msg"],
+                                            recentMsg:
+                                                msg.contains('firebasestorage')
+                                                    ? 'photo'
+                                                    : msg,
                                             time: date,
                                           );
                                         } else {
@@ -201,17 +235,15 @@ class _ChatScreenState extends State<ChatScreen> {
                             );
                           },
                         );
-                      } else {
-                        return Container();
                       }
                     },
-                  ),
-                );
-              } else {
-                return Container();
-              }
-            },
-          ),
+                  );
+                } else {
+                  return Container();
+                }
+              },
+            ),
+          )
         ]),
       ),
       icon: AnimatedIcons.menu_arrow,
@@ -221,15 +253,17 @@ class _ChatScreenState extends State<ChatScreen> {
         HawkFabMenuItem(
           label: 'Profile',
           ontap: () async {
-            senderpPhoto = await fireStoreMethos.getUserPhoto(currentuser.uid);
-            userName = await fireStoreMethos.getUserName(currentuser.uid);
-            phone = await fireStoreMethos.getUserPhone(currentuser.uid);
+            senderpPhoto =
+                await fireStoreMethos.getUserPhoto(_auth.currentUser.uid);
+            userName = await fireStoreMethos.getUserName(_auth.currentUser.uid);
+            phone = await fireStoreMethos.getUserPhone(_auth.currentUser.uid);
 
             Navigator.push(
                 context,
                 MaterialPageRoute(
                     builder: (ctx) => ProfileScreen(
-                        phone: phone == null ? "" : phone,
+                        sender: true,
+                        phone: phone == "" ? "" : phone,
                         userName: userName,
                         photo: senderpPhoto == null
                             ? 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU'
@@ -258,9 +292,11 @@ class _ChatScreenState extends State<ChatScreen> {
         HawkFabMenuItem(
           color: Colors.white,
           label: 'Logout',
-          ontap: () {
-            auth.signOut().then((value) => Navigator.push(
-                context, MaterialPageRoute(builder: (ctx) => Authenticate())));
+          ontap: () async {
+            await auth.signOut().then((value) {
+              Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (context) => SignIn()));
+            });
           },
           labelColor: Theme.of(context).accentColor,
           labelBackgroundColor: Colors.white,
@@ -274,71 +310,92 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 }
 
-class SearchTile extends StatelessWidget {
+class ChatTile extends StatelessWidget {
   final String username;
   final String recentMsg;
   final String photoUrl;
   final String time;
-  SearchTile({this.username, this.photoUrl, this.recentMsg, this.time});
+  final bool active;
+  ChatTile(
+      {this.username, this.photoUrl, this.recentMsg, this.time, this.active});
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-        child: Container(
-          decoration: BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.white.withOpacity(0.2),
-                  spreadRadius: 0.1,
-                  blurRadius: 0.5,
-                  offset: Offset(0, 2), // changes position of shadow
-                ),
-              ],
-              color: Colors.white.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(10)),
-          height: 80,
+    double width = MediaQuery.of(context).size.width;
 
-          //   color: Theme.of(context).accentColor.withOpacity(0.3),
-          child: Padding(
-            padding: const EdgeInsets.only(right: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(left: 8, right: 10),
-                  child: Container(
-                    height: 50,
-                    width: 50,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(25),
-                        image: DecorationImage(
-                            fit: BoxFit.contain,
-                            image: photoUrl != null
-                                ? NetworkImage(photoUrl)
-                                : AssetImage('assets/images/profile.jpg'))),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: Colors.white.withOpacity(0.2),
+                spreadRadius: 0.1,
+                blurRadius: 0.5,
+                offset: Offset(0, 2), // changes position of shadow
+              ),
+            ],
+            color: Colors.white.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(10)),
+        height: 80,
+
+        //   color: Theme.of(context).accentColor.withOpacity(0.3),
+        child: Padding(
+          padding: const EdgeInsets.only(right: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Stack(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8, right: 10),
+                    child: Container(
+                      height: 50,
+                      width: 50,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(25),
+                          image: DecorationImage(
+                              fit: BoxFit.fill,
+                              image: photoUrl != null
+                                  ? NetworkImage(photoUrl)
+                                  : AssetImage('assets/images/profile.jpg'))),
+                    ),
                   ),
-                ),
-                Center(
+                  Positioned(
+                    bottom: 0,
+                    right: 10,
+                    child: CircleAvatar(
+                      backgroundColor: active ? Colors.green : Colors.grey,
+                      radius: 7,
+                    ),
+                  )
+                ],
+              ),
+              Center(
+                child: Container(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(username),
                       Text(
-                        recentMsg,
-                        style: TextStyle(color: Colors.grey),
+                        recentMsg.length > (width * 0.065).toInt()
+                            ? recentMsg.substring(0, (width * 0.065).toInt()) +
+                                '...'
+                            : recentMsg,
+                        style: TextStyle(
+                          color: Colors.grey,
+                        ),
                       )
                     ],
                   ),
                 ),
-                Text(time.toString(),
-                    style: TextStyle(
-                      color: Colors.grey,
-                    )),
-              ],
-            ),
+              ),
+              Text(time.toString(),
+                  style: TextStyle(
+                    color: Colors.grey,
+                  )),
+            ],
           ),
         ),
       ),

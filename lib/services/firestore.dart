@@ -46,7 +46,7 @@ class FireStoreMethos {
     return ref.get().then((value) => value.data()["email"]);
   }
 
-  uploadinfo(Map<String, String> userdata, String userId) {
+  uploadinfo(Map<String, dynamic> userdata, String userId) {
     FirebaseFirestore.instance
         .collection("users")
         .doc(userId)
@@ -70,6 +70,16 @@ class FireStoreMethos {
         .collection('messages')
         .doc(docId)
         .update({"liked": liked});
+  }
+
+  updateStatus(
+    bool isonline,
+    String userID,
+  ) {
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(userID)
+        .update({"status": isonline});
   }
 
   createChatRoom(String chatroomId, chatMap, roomMap) {
@@ -101,13 +111,13 @@ class FireStoreMethos {
         .snapshots();
   }
 
-  Future getLastMessage(String roomId) async {
-    return await FirebaseFirestore.instance
+  Stream getLastMessage(String roomId) {
+    return FirebaseFirestore.instance
         .collection("chatroom")
         .doc(roomId)
         .collection("messages")
         .orderBy("time", descending: true)
-        .get();
+        .snapshots();
   }
 
   String getDocID(String user1, String user2) {

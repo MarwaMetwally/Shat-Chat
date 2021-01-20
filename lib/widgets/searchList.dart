@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class SearchTile extends StatelessWidget {
   final String username;
-  Function onPressed;
+  final Function onPressed;
   final String photoUrl;
   SearchTile({this.username, this.photoUrl, this.onPressed});
   @override
@@ -21,7 +21,7 @@ class SearchTile extends StatelessWidget {
                 decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(25),
                     image: DecorationImage(
-                        fit: BoxFit.contain,
+                        fit: BoxFit.fill,
                         image: photoUrl != null
                             ? NetworkImage(photoUrl)
                             : NetworkImage(

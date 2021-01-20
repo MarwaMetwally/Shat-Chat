@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shatchat/screens/profile.dart';
+
 import 'chatScreen.dart';
 import 'package:shatchat/services/firestore.dart';
 import 'package:shatchat/services/auth.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class SignIn extends StatefulWidget {
-  final Function toggle;
-  SignIn(this.toggle);
-
   @override
   _SignInState createState() => _SignInState();
 }
@@ -24,26 +21,43 @@ class _SignInState extends State<SignIn> {
   final Auth auth = new Auth();
   FireStoreMethos _fireStoreMethos = new FireStoreMethos();
   FirebaseAuth _auth = FirebaseAuth.instance;
+  void showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('An Error Occurred!'),
+        content: Text(message),
+        actions: <Widget>[
+          FlatButton(
+            child: Text('Okay'),
+            onPressed: () {
+              //  Navigator.of(ctx).pop();
+            },
+          )
+        ],
+      ),
+    );
+  }
 
   Future<void> _submit() async {
     if (_formkey.currentState.validate()) {
       _formkey.currentState.save();
-      await auth.signIn(email.text, password.text).then((value) async {
-        senderPhoto =
-            await _fireStoreMethos.getUserPhoto(_auth.currentUser.uid);
-        print(senderPhoto);
-        return Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (ctx) => ChatScreen(senderPhoto)));
-      });
+      try {
+        await auth.signIn(email.text, password.text);
 
-      // senderPhoto = await _fireStoreMethos
-      //     .getUserPhoto(_auth.currentUser.uid)
-      //     .then((value) {
-      //   print(senderPhoto);
-      //   // return Navigator.pushReplacement(context,
-      //   //     MaterialPageRoute(builder: (ctx) => ChatScreen(senderPhoto)));
-      // });
+        Navigator.of(context)
+            .push(MaterialPageRoute(builder: (ctx) => ChatScreen()));
+      } catch (e) {
+        print(e);
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    email.dispose();
+    password.dispose();
+    super.dispose();
   }
 
   @override
@@ -181,14 +195,23 @@ class _SignInState extends State<SignIn> {
                                               ),
                                               color: Color(0xff5ad1a4),
                                               onPressed: () async {
-                                                await auth.signInwithGoogle().then(
-                                                    (value) => Navigator.pushReplacement(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                            builder: (ctx) =>
-                                                                ChatScreen(_auth
-                                                                    .currentUser
-                                                                    .photoURL))));
+                                                await auth
+                                                    .signInwithGoogle()
+                                                    .then((value) => _auth
+                                                                .currentUser
+                                                                .uid !=
+                                                            null
+                                                        ? Navigator.of(context)
+                                                            .push(MaterialPageRoute(
+                                                                builder: (ctx) =>
+                                                                    ChatScreen()))
+                                                        : Navigator.of(context)
+                                                            .push(MaterialPageRoute(
+                                                                builder: (ctx) =>
+                                                                    SignIn()))
+                                                            .catchError((e) {
+                                                            print(e);
+                                                          }));
 
                                                 print('sendr$senderPhoto');
                                               },
@@ -222,7 +245,6 @@ class _SignInState extends State<SignIn> {
                                             children: [
                                               Text('Don\'t have account? '),
                                               GestureDetector(
-                                                onTap: widget.toggle,
                                                 child: Text(
                                                   'Register now',
                                                   style: TextStyle(

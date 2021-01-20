@@ -7,9 +7,6 @@ import 'package:shatchat/model/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 
 class SignUp extends StatefulWidget {
-  final Function toggle;
-  SignUp(this.toggle);
-
   @override
   _SignUpState createState() => _SignUpState();
 }
@@ -18,7 +15,7 @@ class _SignUpState extends State<SignUp> {
   final TextEditingController email = TextEditingController();
 
   final Auth authh = new Auth();
-  Users currentuser = new Users();
+
   String userid;
   final FireStoreMethos firestore = new FireStoreMethos();
 
@@ -58,30 +55,33 @@ class _SignUpState extends State<SignUp> {
     Future<void> _submit() async {
       auth.FirebaseAuth _auth = auth.FirebaseAuth.instance;
       if (_formKey.currentState.validate()) {
+        _formKey.currentState.save();
         try {
-          // _formKey.currentState.save();
-
           final userId = await authh
               .signUp(email.text, _passwordController.text, username.text)
               .catchError((e) {
             showErrorDialog(e.toString());
           });
 
-          Map<String, String> userInfo = {
+          Map<String, dynamic> userInfo = {
+            "phone": "",
             "name": username.text,
             "email": email.text,
             "photo":
-                "https://icon-library.com/images/no-profile-pic-icon/no-profile-pic-icon-16.jpg"
+                'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU',
+            "status": true
           };
           if (userId != null) {
-            currentuser = authh.currentUser(_auth.currentUser);
-            userid = currentuser.userId;
+            userid = _auth.currentUser.uid;
 
             firestore.uploadinfo(userInfo, userid);
-            Navigator.pushReplacement(
+            Navigator.push(
                 context,
                 MaterialPageRoute(
                     builder: (ctx) => ProfileScreen(
+                          photo:
+                              'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU',
+                          sender: true,
                           userName: username.text,
                           phone: phone.text,
                         )));
@@ -205,7 +205,7 @@ class _SignUpState extends State<SignUp> {
                                   ),
                                   TextFormField(
                                     controller: phone,
-                                    keyboardType: TextInputType.emailAddress,
+                                    keyboardType: TextInputType.number,
                                     decoration: InputDecoration(
                                         labelText: 'Phone',
                                         prefixIcon: Icon(
@@ -329,7 +329,6 @@ class _SignUpState extends State<SignUp> {
                                               children: [
                                                 Text('Already have account? '),
                                                 InkWell(
-                                                  onTap: widget.toggle,
                                                   // Navigator.push(
                                                   //     context,
                                                   //     MaterialPageRoute(

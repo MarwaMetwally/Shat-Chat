@@ -1,4 +1,3 @@
-import 'package:shatchat/model/user.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -16,20 +15,20 @@ class Auth {
       );
   bool google = false;
 
-  Users currentUser(auth.User user) {
-    return user != null
-        ? Users(
-            userId: user.uid,
-          )
-        : null;
-  }
+  // Users currentUser(auth.User user) {
+  //   return user != null
+  //       ? Users(
+  //           userId: user.uid,
+  //         )
+  //       : null;
+  // }
 
-  Future signIn(String email, String password) async {
+  Future<String> signIn(String email, String password) async {
     try {
       final result = await _auth.signInWithEmailAndPassword(
           email: email, password: password);
       auth.User user = result.user;
-      return currentUser(user);
+      return user.uid;
     } catch (e) {
       print(e.toString());
     }
@@ -53,7 +52,7 @@ class Auth {
 
   Future signOut() async {
     try {
-      return await _auth.signOut().then((value) => _googleSignIn.signOut());
+      await _auth.signOut().then((value) => _googleSignIn.signOut());
     } catch (e) {
       print(e.toString());
     }
@@ -76,10 +75,12 @@ class Auth {
         print('testtttt ${user.uid}');
         print('testtttt email ${user.email}');
         print('testtttt usename ${user.displayName}');
-        Map<String, String> userInfo = {
+        Map<String, dynamic> userInfo = {
           "name": user.displayName,
           "email": user.email,
-          "photo": user.photoURL
+          "photo": user.photoURL,
+          "status": true,
+          "phone": ""
         };
         final result = await FirebaseFirestore.instance
             .collection("users")

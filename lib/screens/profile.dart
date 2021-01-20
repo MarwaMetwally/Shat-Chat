@@ -11,8 +11,9 @@ import 'package:shatchat/screens/chatScreen.dart';
 class ProfileScreen extends StatefulWidget {
   final String userName;
   final String phone;
-  final photo;
-  ProfileScreen({this.phone, this.userName, this.photo});
+  final String photo;
+  final bool sender;
+  ProfileScreen({this.phone, this.userName, this.photo, this.sender});
   @override
   _ProfileScreenState createState() => _ProfileScreenState();
 }
@@ -40,8 +41,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
   }
 
-  getimage() async {}
-
   Future<void> uploadImageToFirebase() async {
     final pickedFile = await picker.getImage(source: ImageSource.gallery);
     setState(() {
@@ -64,7 +63,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       taskSnapshot.ref.getDownloadURL().then((value) {
         setState(() {
           print("Done: $value");
-          print(value);
+
           imageUrl = _image == null
               ? 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-mHFh8u6UvSXY3spw5oHgyZHKNmNOdgFJ9w&usqp=CAU'
               : value;
@@ -113,26 +112,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         backgroundImage: _image == null
                             ? NetworkImage(widget.photo)
                             : FileImage(_image),
+                        child: widget.photo == null
+                            ? Image.network(
+                                'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU')
+                            : null,
                       ),
                     ),
-                    Positioned(
-                        top: 170,
-                        left: 120,
-                        child: CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Theme.of(context).accentColor,
-                          child: IconButton(
-                              icon: Icon(
-                                FontAwesomeIcons.camera,
-                                size: 30,
-                                color: Colors.white,
-                              ),
-                              onPressed: () async {
-                                await uploadImageToFirebase();
+                    widget.sender
+                        ? Positioned(
+                            top: 170,
+                            left: 120,
+                            child: CircleAvatar(
+                              radius: 30,
+                              backgroundColor: Theme.of(context).accentColor,
+                              child: IconButton(
+                                  icon: Icon(
+                                    FontAwesomeIcons.camera,
+                                    size: 30,
+                                    color: Colors.white,
+                                  ),
+                                  onPressed: () async {
+                                    await uploadImageToFirebase();
 
-                                // print('userid $userid');
-                              }),
-                        )),
+                                    // print('userid $userid');
+                                  }),
+                            ))
+                        : Container(),
 
                     //   Icon(Icons.camera)
                   ],
@@ -192,13 +197,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ),
                                       ),
                                     ),
-                              GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      editName = true;
-                                    });
-                                  },
-                                  child: Icon(Icons.edit))
+                              widget.sender
+                                  ? GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          editName = true;
+                                        });
+                                      },
+                                      child: Icon(Icons.edit))
+                                  : Container()
                             ],
                           ),
                           Divider(
@@ -220,6 +227,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             Theme.of(context).accentColor,
 
                                         controller: phone,
+                                        keyboardType: TextInputType.number,
                                         //  autofocus: true,
                                         //  enabled: false,
                                         decoration: InputDecoration(
@@ -227,19 +235,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             borderSide: BorderSide.none,
                                             //  borderRadius: BorderRadius.circular(20),
                                           ),
-                                          // enabledBorder: OutlineInputBorder(
-                                          //   borderRadius: BorderRadius.circular(10),
-                                          //   borderSide: BorderSide(
-                                          //     width: 1,
-                                          //   ),
-                                          // ),
-                                          // border: OutlineInputBorder(
-                                          //   borderRadius: BorderRadius.circular(10),
-                                          //   borderSide: BorderSide(
-                                          //     color: Theme.of(context).accentColor,
-                                          //     width: 1,
-                                          //   ),
-                                          // ),
 
                                           hintText: "Phone",
                                           // prefixIcon: Icon(FontAwesomeIcons.user),
@@ -256,42 +251,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ),
                                       ),
                                     ),
-                              GestureDetector(
-                                  onTap: () {
-                                    setState(() {
-                                      editPhone = true;
-                                    });
-                                  },
-                                  child: Icon(Icons.edit))
+                              widget.sender
+                                  ? GestureDetector(
+                                      onTap: () {
+                                        setState(() {
+                                          editPhone = true;
+                                        });
+                                      },
+                                      child: Icon(Icons.edit))
+                                  : Container()
                             ],
                           ),
-                          // TextField(
-                          //   controller: phone,
-                          //   focusNode: myFocusNode,
-                          //   decoration: InputDecoration(
-                          //       border: OutlineInputBorder(
-                          //         borderSide: BorderSide.none,
-                          //         //  borderRadius: BorderRadius.circular(20),
-                          //       ),
-                          //       // enabledBorder: OutlineInputBorder(
-                          //       //   borderRadius: BorderRadius.circular(10),
-                          //       //   borderSide: BorderSide(
-                          //       //     width: 1,
-                          //       //   ),
-                          //       // ),
-                          //       // border: OutlineInputBorder(
-                          //       //   borderRadius: BorderRadius.circular(10),
-                          //       //   borderSide: BorderSide(
-                          //       //     color: Theme.of(context).accentColor,
-                          //       //     width: 1,
-                          //       //   ),
-                          //       // ),
-                          //       fillColor: Colors.white60,
-                          //       //   filled: true,
-                          //       hintText: "Phone",
-                          //       prefixIcon: Icon(Icons.phone),
-                          //       suffixIcon: Icon(Icons.edit)),
-                          // ),
                           Divider(
                             indent: 50,
                             thickness: 1,
@@ -302,48 +272,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(11.0),
-                  child: FlatButton(
-                      minWidth: 100,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(25.0),
-                      ),
-                      color: Color(0xff5ad1a4),
-                      onPressed: () async {
-                        setState(() {
-                          isloading = true;
-                        });
-                        imageUrl = await _fireStoreMethos
-                            .getUserPhoto(_auth.currentUser.uid)
-                            .then((value) {
-                          print(imageUrl);
-                          setState(() {
-                            isloading = false;
-                          });
-                          return Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (ctx) => ChatScreen(imageUrl == null
-                                      ? 'https://rahmapk.org/wp-content/uploads/2017/03/default-avatar.jpg'
-                                      : imageUrl)));
-                        });
-                      },
-                      child: Padding(
-                        padding: const EdgeInsets.all(3.0),
-                        child: isloading
-                            ? CircularProgressIndicator(
-                                backgroundColor: Colors.white,
-                              )
-                            : Text(
-                                'Done',
-                                style: TextStyle(
-                                  fontSize: 19,
-                                  color: Colors.white,
-                                ),
-                              ),
-                      )),
-                )
+                widget.sender
+                    ? Padding(
+                        padding: const EdgeInsets.all(11.0),
+                        child: FlatButton(
+                            minWidth: 100,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25.0),
+                            ),
+                            color: Color(0xff5ad1a4),
+                            onPressed: () async {
+                              setState(() {
+                                isloading = true;
+                              });
+                              imageUrl = await _fireStoreMethos
+                                  .getUserPhoto(_auth.currentUser.uid)
+                                  .then((value) {
+                                print(imageUrl);
+                                setState(() {
+                                  isloading = false;
+                                });
+                                return Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (ctx) => ChatScreen()));
+                              });
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(3.0),
+                              child: isloading
+                                  ? CircularProgressIndicator(
+                                      backgroundColor: Colors.white,
+                                    )
+                                  : Text(
+                                      'Done',
+                                      style: TextStyle(
+                                        fontSize: 19,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            )),
+                      )
+                    : Container()
               ],
             ),
           ),
@@ -352,44 +322,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-// TextField(
-//                       decoration: InputDecoration(
-//                           enabledBorder: OutlineInputBorder(
-//                             borderRadius: BorderRadius.circular(10),
-//                             borderSide: BorderSide(
-//                               width: 1,
-//                             ),
-//                           ),
-//                           border: OutlineInputBorder(
-//                             borderRadius: BorderRadius.circular(10),
-//                             borderSide: BorderSide(
-//                               color: Theme.of(context).accentColor,
-//                               width: 1,
-//                             ),
-//                           ),
-//                           fillColor: Colors.white60,
-//                           filled: true,
-//                           focusColor: Colors.red,
-//                           hintText: "Name",
-//                           prefixIcon: Icon(FontAwesomeIcons.user)),
-//                     ),
-//                     TextField(
-//                       decoration: InputDecoration(
-//                           enabledBorder: OutlineInputBorder(
-//                             borderRadius: BorderRadius.circular(10),
-//                             borderSide: BorderSide(
-//                               width: 1,
-//                             ),
-//                           ),
-//                           border: OutlineInputBorder(
-//                             borderRadius: BorderRadius.circular(10),
-//                             borderSide: BorderSide(
-//                               color: Theme.of(context).accentColor,
-//                               width: 1,
-//                             ),
-//                           ),
-//                           fillColor: Colors.white60,
-//                           filled: true,
-//                           hintText: "Phone",
-//                           prefixIcon: Icon(Icons.phone)),
-//                     ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shatchat/helper/authenticate.dart';
 
 import 'package:firebase_core/firebase_core.dart';
+import 'package:shatchat/screens/signin.dart';
 import 'package:shatchat/services/firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shatchat/screens/chatScreen.dart';
@@ -32,13 +32,11 @@ class MyApp extends StatelessWidget {
             return FutureBuilder(
               future: store.getUserPhoto(FirebaseAuth.instance.currentUser.uid),
               builder: (context, snapshot) {
-                return ChatScreen(snapshot.data != null
-                    ? snapshot.data
-                    : 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU');
+                return ChatScreen();
               },
             );
           } else {
-            return Authenticate();
+            return SignIn();
           }
         },
       ),
