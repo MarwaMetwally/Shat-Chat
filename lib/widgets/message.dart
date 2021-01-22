@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pinch_zoom_image_last/pinch_zoom_image_last.dart';
 
 class Message extends StatelessWidget {
   Message({this.text, this.isMe, this.time, this.msgphoto});
@@ -36,11 +37,14 @@ class Message extends StatelessWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(vertical: 10.0, horizontal: 20.0),
                 child: msgphoto
-                    ? Image.network(
-                        text,
-                        fit: BoxFit.contain,
-                        height: 300,
-                        width: 300,
+                    ? PinchZoomImage(
+                        hideStatusBarWhileZooming: true,
+                        image: Image.network(
+                          text,
+                          fit: BoxFit.fill,
+                          height: 300,
+                          width: 300,
+                        ),
                       )
                     : Text(
                         text,

@@ -56,11 +56,21 @@ class FireStoreMethos {
     });
   }
 
-  uploadUserData(String photo, String userId, String phone, String newName) {
+  uploadUserData(String userId, String phone, String newName) {
     FirebaseFirestore.instance
         .collection('users')
         .doc(userId)
-        .update({"photo": photo, "phone": phone, "name": newName});
+        .update({"phone": phone, "name": newName});
+  }
+
+  uploadUserPhoto(
+    String photo,
+    String userId,
+  ) {
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .update({"photo": photo});
   }
 
   upateReact(bool liked, String chatroomId, String docId) {
@@ -128,4 +138,6 @@ class FireStoreMethos {
       return "$user1\-$user2";
     }
   }
+
+  Future updatePassword() {}
 }

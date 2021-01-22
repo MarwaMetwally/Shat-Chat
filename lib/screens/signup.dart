@@ -3,8 +3,9 @@ import 'package:flutter/services.dart';
 import 'profile.dart';
 import 'package:shatchat/services/auth.dart';
 import 'package:shatchat/services/firestore.dart';
-import 'package:shatchat/model/user.dart';
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:firebase_auth/firebase_auth.dart' as auth;
+import 'signin.dart';
 
 class SignUp extends StatefulWidget {
   @override
@@ -57,50 +58,39 @@ class _SignUpState extends State<SignUp> {
       if (_formKey.currentState.validate()) {
         _formKey.currentState.save();
         try {
-          final userId = await authh
+          await authh
               .signUp(email.text, _passwordController.text, username.text)
               .catchError((e) {
-            showErrorDialog(e.toString());
+            var errormsg = 'Authentication failed !';
+            if (e.toString().contains('already in use')) {
+              errormsg = 'This email address is already in use.';
+            }
+            showErrorDialog(errormsg);
           });
 
           Map<String, dynamic> userInfo = {
-            "phone": "",
+            "phone": phone.text,
             "name": username.text,
             "email": email.text,
             "photo":
                 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU',
             "status": true
           };
-          if (userId != null) {
-            userid = _auth.currentUser.uid;
 
-            firestore.uploadinfo(userInfo, userid);
-            Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (ctx) => ProfileScreen(
-                          photo:
-                              'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU',
-                          sender: true,
-                          userName: username.text,
-                          phone: phone.text,
-                        )));
-          }
+          userid = _auth.currentUser.uid;
 
-          //  });
+          firestore.uploadinfo(userInfo, userid);
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (ctx) => ProfileScreen(
+                        photo:
+                            'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU',
+                        sender: true,
+                        userName: username.text,
+                        phone: phone.text,
+                      )));
         } catch (e) {
-          // var errormsg = 'Authentication failed !';
-          // if (e.toString().contains('EMAIL_EXISTS')) {
-          //   errormsg = 'This email address is already in use.';
-          // } else if (e.toString().contains('INVALID_EMAIL')) {
-          //   errormsg = 'This is not a valid email address';
-          // } else if (e.toString().contains('WEAK_PASSWORD')) {
-          //   errormsg = 'This password is too weak.';
-          // } else if (e.toString().contains('EMAIL_NOT_FOUND')) {
-          //   errormsg = 'Could not find a user with that email.';
-          // } else if (e.toString().contains('INVALID_PASSWORD')) {
-          //   errormsg = 'Invalid password.';
-          // }
           print('eeeee$e');
         }
       }
@@ -141,12 +131,21 @@ class _SignUpState extends State<SignUp> {
                         Positioned(
                           top: 180,
                           left: 115,
-                          child: Text(
-                            'Shat Chat',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold),
+                          child: SizedBox(
+                            child: ColorizeAnimatedTextKit(
+                              text: [
+                                "Shat Chat",
+                              ],
+                              textStyle: TextStyle(
+                                fontSize: 40.0,
+                              ),
+                              colors: [
+                                Colors.white,
+                                Color(0xff45b591),
+                                Colors.grey,
+                              ],
+                              textAlign: TextAlign.start,
+                            ),
                           ),
                         ),
                       ],
@@ -214,6 +213,11 @@ class _SignUpState extends State<SignUp> {
                                         )),
                                     onSaved: (value) {
                                       phone.text = value;
+                                    },
+                                    validator: (value) {
+                                      if (value.isEmpty || value.length < 11) {
+                                        return 'Invalid phone number !';
+                                      }
                                     },
                                   ),
                                   TextFormField(
@@ -329,13 +333,13 @@ class _SignUpState extends State<SignUp> {
                                               children: [
                                                 Text('Already have account? '),
                                                 InkWell(
-                                                  // Navigator.push(
-                                                  //     context,
-                                                  //     MaterialPageRoute(
-                                                  //         builder: (ctx) =>
-                                                  //             SignIn(widget
-                                                  //                 .toggle)));
-
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                            builder: (ctx) =>
+                                                                SignIn()));
+                                                  },
                                                   child: Text(
                                                     'Sign in now',
                                                     style: TextStyle(

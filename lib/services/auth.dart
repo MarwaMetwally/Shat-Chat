@@ -24,22 +24,18 @@ class Auth {
   // }
 
   Future<String> signIn(String email, String password) async {
-    try {
-      final result = await _auth.signInWithEmailAndPassword(
-          email: email, password: password);
-      auth.User user = result.user;
-      return user.uid;
-    } catch (e) {
-      print(e.toString());
-    }
-  }
-
-  Future<String> signUp(String email, String password, String name) async {
-    username = name;
-    final result = await _auth.createUserWithEmailAndPassword(
+    final result = await _auth.signInWithEmailAndPassword(
         email: email, password: password);
     auth.User user = result.user;
     return user.uid;
+  }
+
+  Future signUp(String email, String password, String name) async {
+    username = name;
+    return await _auth.createUserWithEmailAndPassword(
+        email: email, password: password);
+    //  auth.User user = result.user;
+    //return user.uid;
   }
 
   Future resetPassword(String email) async {
@@ -78,9 +74,11 @@ class Auth {
         Map<String, dynamic> userInfo = {
           "name": user.displayName,
           "email": user.email,
-          "photo": user.photoURL,
+          "photo": user.photoURL == null
+              ? 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR-mHFh8u6UvSXY3spw5oHgyZHKNmNOdgFJ9w&usqp=CAU'
+              : user.photoURL,
           "status": true,
-          "phone": ""
+          "phone": user.phoneNumber == null ? "" : user.phoneNumber
         };
         final result = await FirebaseFirestore.instance
             .collection("users")

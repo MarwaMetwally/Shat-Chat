@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-
+import 'package:lottie/lottie.dart';
 import 'package:shatchat/screens/profile.dart';
 import 'package:shatchat/screens/signin.dart';
 import 'chatroom.dart';
@@ -10,6 +10,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hawk_fab_menu/hawk_fab_menu.dart';
 import 'package:shatchat/services/auth.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/services.dart';
 
 class ChatScreen extends StatefulWidget {
   // final String senderPhoto;
@@ -69,6 +70,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setEnabledSystemUIOverlays([]);
     return Scaffold(
         body: HawkFabMenu(
       body: Container(
@@ -129,6 +131,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               stream: fireStoreMethos.friends(_auth.currentUser.email),
               builder: (context, chatroomsnapshot) {
                 if (chatroomsnapshot.data != null) {
+                  if (chatroomsnapshot.data.docs.length == 0) {
+                    return Lottie.asset('assets/6192-mobile-chat.json');
+                  }
                   for (int i = 0; i < chatroomsnapshot.data.docs.length; i++) {
                     snapshotIndex = i;
                     print('ind $snapshotIndex');
@@ -157,19 +162,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                 receiver =
                                     snapshot.data.docs[index].data()["email"];
 
-                                phone = await fireStoreMethos
-                                    .getUserPhone(_auth.currentUser.uid);
+                                phone =
+                                    snapshot.data.docs[index].data()["phone"];
                                 senderpPhoto = await fireStoreMethos
                                     .getUserPhoto(_auth.currentUser.uid);
                                 print(
                                     snapshot.data.docs[index].data()["status"]);
-                                print(phone);
+
                                 print(snapshot.data.docs[index].data()["name"]);
                                 print(receiver);
                                 print(sender);
                                 print(
                                     snapshot.data.docs[index].data()["photo"]);
                                 print(senderpPhoto);
+                                print('phoneeeeee$phone');
                                 Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -263,7 +269,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 MaterialPageRoute(
                     builder: (ctx) => ProfileScreen(
                         sender: true,
-                        phone: phone == "" ? "" : phone,
+                        phone: phone,
                         userName: userName,
                         photo: senderpPhoto == null
                             ? 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQdMCPi6SVnch4j_K57TF_XBbFmYuPGaMzOPQ&usqp=CAU'

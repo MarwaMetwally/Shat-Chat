@@ -4,6 +4,7 @@ import 'package:shatchat/screens/chatroom.dart';
 import 'package:shatchat/services/firestore.dart';
 import 'package:shatchat/widgets/searchList.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 
 class SearchScreen extends StatefulWidget {
   @override
@@ -23,6 +24,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setEnabledSystemUIOverlays([]);
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -129,8 +131,7 @@ class _SearchScreenState extends State<SearchScreen> {
                         onPressed: () async {
                           String photo = await firestore.getUserPhoto(
                               FirebaseAuth.instance.currentUser.uid);
-                          String phone = await firestore.getUserPhoto(
-                              FirebaseAuth.instance.currentUser.uid);
+                          String phone = filteredusers[index].data()["phone"];
                           Navigator.push(
                               context,
                               MaterialPageRoute(

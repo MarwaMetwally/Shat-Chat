@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart' as storage;
 import 'package:shatchat/services/firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shatchat/screens/chatScreen.dart';
+import 'package:flutter/services.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String userName;
@@ -25,7 +26,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   bool editName = false;
   bool editPhone = false;
-  bool isloading = false;
+  bool photoloading = false;
   FireStoreMethos _fireStoreMethos = new FireStoreMethos();
   FirebaseAuth _auth = FirebaseAuth.instance;
   String currentuserId;
@@ -59,6 +60,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       //     print("Done: $value");
       //     imageUrl = value;
       //   });
+      setState(() {
+        photoloading = true;
+      });
       storage.TaskSnapshot taskSnapshot = await uploadTask;
       taskSnapshot.ref.getDownloadURL().then((value) {
         setState(() {
@@ -69,8 +73,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               : value;
           print(phone.text);
           print(name.text);
-          _fireStoreMethos.uploadUserData(
-              imageUrl, _auth.currentUser.uid, phone.text, name.text);
+          _fireStoreMethos.uploadUserPhoto(imageUrl, _auth.currentUser.uid);
+          setState(() {
+            photoloading = false;
+          });
           // return value;
         });
       });
@@ -79,6 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setEnabledSystemUIOverlays([]);
     return Scaffold(
       // appBar: AppBar(
       //   title: Text("Profile"),
@@ -91,8 +98,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Colors.white.withOpacity(0.4), BlendMode.dstATop),
                 image: _image == null
                     ? NetworkImage(widget.photo)
-                    : FileImage(_image),
-                fit: BoxFit.cover)),
+                    : FileImage(
+                        _image,
+                      ),
+                fit: BoxFit.fill)),
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: Padding(
@@ -102,12 +111,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               // crossAxisAlignment: CrossAxisAlignment.center,
 
               children: [
+                Align(
+                  alignment: Alignment.topLeft,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Icon(Icons.arrow_back,
+                        size: 30, color: Theme.of(context).accentColor),
+                  ),
+                ),
                 Stack(
                   alignment: Alignment.center,
                   children: [
                     Container(
                       height: 230,
                       child: CircleAvatar(
+                        backgroundColor: Colors.white,
                         radius: 100,
                         backgroundImage: _image == null
                             ? NetworkImage(widget.photo)
@@ -281,26 +299,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               borderRadius: BorderRadius.circular(25.0),
                             ),
                             color: Color(0xff5ad1a4),
-                            onPressed: () async {
-                              setState(() {
-                                isloading = true;
-                              });
-                              imageUrl = await _fireStoreMethos
-                                  .getUserPhoto(_auth.currentUser.uid)
-                                  .then((value) {
-                                print(imageUrl);
-                                setState(() {
-                                  isloading = false;
-                                });
-                                return Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (ctx) => ChatScreen()));
-                              });
+                            onPressed: () {
+                              // setState(() {
+                              //   isloading = true;
+                              // });
+                              _fireStoreMethos.uploadUserData(
+                                  _auth.currentUser.uid, phone.text, name.text);
+
+                              print(imageUrl);
+                              // setState(() {
+                              //   isloading = false;
+                              // });
+                              Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (ctx) => ChatScreen()));
                             },
                             child: Padding(
                               padding: const EdgeInsets.all(3.0),
-                              child: isloading
+                              child: photoloading
                                   ? CircularProgressIndicator(
                                       backgroundColor: Colors.white,
                                     )
